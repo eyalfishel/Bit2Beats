@@ -5,7 +5,6 @@ var lastBlockHeight = 0;
 var provider_name = "blockchain.info";
 
 var transactionSocketDelay = 1000;
-var transactions_in_minute = 0;
 var interval_ret = 0;
 var sounds_blco = [];
 var sounds_nb = [];
@@ -45,7 +44,6 @@ TransactionSocket.init = function() {
 			connection.send(JSON.stringify({
                                 "op" : "ping_block"
                         }));
-//			$.get("https://blockchain.info/q/unconfirmedcount?cors=true", function (data) {alert(data);});
 
 			interval_ret = setInterval(got_timeout, 60000);
 			for (i = 1; i < 11; i++){
@@ -99,7 +97,6 @@ TransactionSocket.init = function() {
 			// New Transaction
 			if (data.op == "utx") {
 				var transacted = 0;
-				transactions_in_minute += 1;
 
 				for (var i = 0; i < data.x.out.length; i++) {
 					transacted += data.x.out[i].value;
@@ -108,16 +105,6 @@ TransactionSocket.init = function() {
 				var bitcoins = transacted / satoshi;
 				//console.log("Transaction: " + bitcoins + " BTC");
 
-				var donation = false;
-                                var soundDonation = false;
-				var outputs = data.x.out;
-				for (var j = 0; j < outputs.length; j++) {
-					if ((outputs[j].addr) == DONATION_ADDRESS) {
-						bitcoins = data.x.out[j].value / satoshi;
-						new Transaction(bitcoins, true);
-						return;
-					}
-				}
 				if (bitcoins < 0.1)
 					sounds_nt[0].play();
 				else if (bitcoins < 0.3)
@@ -139,26 +126,7 @@ TransactionSocket.init = function() {
 				else
 					sounds_nt[9].play();
 
-                if (transaction_count === 0) {
-                    new Transaction(bitcoins);
-                } else {
-				    setTimeout(function() {
-					    new Transaction(bitcoins);
-				    }, Math.random() * DELAY_CAP);
-				}
-
 			} else if (data.op == "block") {
-				var blockHeight = data.x.height;
-				var transactions = data.x.nTx;
-				var volumeSent = data.x.estimatedBTCSent;
-				var blockSize = data.x.size;
-				// Filter out the orphaned blocks.
-				if (blockHeight > lastBlockHeight) {
-					lastBlockHeight = blockHeight;
-					console.log("New Block");
-					new Block(blockHeight, transactions, volumeSent, blockSize);
-				}
-				//$.get("https://blockchain.info/rawblock/"+data.x.hash+"?format=json&cors=true", print_block);
 				sounds_nb[0].play();
 			}
 
@@ -176,14 +144,7 @@ TransactionSocket.close = function() {
 	StatusBox.closed("blockchain");
 };
 
-function print_block(data){
-//	alert("print_block");
-//	alert(JSON.stringify(data));
-//	alert("there were " + data.tx.length + " transactions in the last block");
-}
-
-function print_rate_change(data){
-//	alert("percent change 24h: " + data.data.quotes.USD.percent_change_24h);
+function play_rate_change(data){
 	var rate = data.data.quotes.USD.percent_change_24h;
 	if (rate < -20)
 		sounds_pc_24[0].play();
@@ -203,8 +164,7 @@ function print_rate_change(data){
 		sounds_pc_24[7].play();
 }
 
-function print_unconfirmed_count(data){
-//	alert("unconfirmed transactions: " + data);
+function play_unconfirmed_count(data){
 	if (data < 5000)
 		sounds_blco[0].play();
 	else if (data < 15000)
@@ -218,8 +178,6 @@ function print_unconfirmed_count(data){
 }
 
 function got_timeout(){
-//	alert("there were " + transactions_in_minute + " transactions in the last minute");
-	transactions_in_minute = 0;
-	$.get("https://api.coinmarketcap.com/v2/ticker/1/?format=json&cors=true", print_rate_change);
-	$.get("https://blockchain.info/q/unconfirmedcount?format=json&cors=true", print_unconfirmed_count);
+	$.get("https://api.coinmarketcap.com/v2/ticker/1/?format=json&cors=true", play_rate_change);
+	$.get("https://blockchain.info/q/unconfirmedcount?format=json&cors=true", play_unconfirmed_count);
 }
